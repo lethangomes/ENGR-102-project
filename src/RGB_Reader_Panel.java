@@ -29,6 +29,7 @@ public class RGB_Reader_Panel extends JPanel {
 		super.paintComponent(g);
 		g.drawImage(image, 0, 0, null);
 		
+		//draws boxes
 		for(int i = 0; i < boxes.size(); i++)
 		{
 			Box currentBox = boxes.get(i);
