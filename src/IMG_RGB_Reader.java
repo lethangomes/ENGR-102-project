@@ -25,19 +25,22 @@ import javax.swing.JTextField;
 public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotionListener {
 
 	RGB_Reader_Panel panel = new RGB_Reader_Panel();
-	JFrame fileChooser = new JFrame();
+	JFrame fileChooser = new JFrame("Enter Image File Name");
 	JFrame frame = new JFrame();
 	
-	JTextField fileChooserField = new JTextField("");
+	JTextField fileChooserField = new JTextField();
 	JButton fileChooserB = new JButton("Enter");
-	JButton placeBoxB = new JButton("Place Box");
+	JButton compareBoxesB = new JButton("Compare Boxes");
+	JButton deleteBoxesB = new JButton("Delete Box");
 	JTextArea boxInfoField =new JTextArea("");
 	JTextArea colorField = new JTextArea();
 	Container east = new Container();
 	
 	final int NONE = 0;
-	final int BOX_FIRST_CORNER = 1;
-	final int BOX_SECOND_CORNER = 2;
+	final int COMPARE_BOXES = 1;
+	final int COMPARE_BOXES2 = 2;
+	final int BOX_SECOND_CORNER = 3;
+	final int DELETE_BOX = 4;
 	int state = NONE;
 	
 	int boxStartX = 0;
@@ -47,6 +50,8 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 	String fileName;
 	
 	DecimalFormat df = new DecimalFormat("###.###");
+	
+	Box firstBox = null;
 	
 	public static void main(String[] args) 
 	{
@@ -62,7 +67,7 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 		fileChooser.add(fileChooserField, BorderLayout.CENTER);
 		fileChooserB.addActionListener(this);
 		fileChooser.add(fileChooserB, BorderLayout.EAST);
-		fileChooser.setSize(300, 100);
+		fileChooser.setSize(500, 100);
 		fileChooser.setVisible(true);
 	}
 	
@@ -77,10 +82,13 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 		panel.addMouseMotionListener(this);
 		
 		east.setLayout(new GridLayout(5,1));
-		placeBoxB.addActionListener(this);
-		placeBoxB.setBackground(Color.gray);
+		compareBoxesB.addActionListener(this);
+		compareBoxesB.setBackground(Color.gray);
+		deleteBoxesB.addActionListener(this);
+		deleteBoxesB.setBackground(Color.gray);
 		boxInfoField.setEditable(false);
-		east.add(placeBoxB);
+		east.add(compareBoxesB);
+		east.add(deleteBoxesB);
 		east.add(colorField);
 		east.add(boxInfoField);
 		frame.add(east, BorderLayout.EAST);
@@ -102,18 +110,44 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 	public void mouseReleased(MouseEvent e) {
 		switch(state)
 		{
-		case BOX_FIRST_CORNER:
-			boxStartX = e.getX();
-			boxStartY = e.getY();
-			state = BOX_SECOND_CORNER;
-			panel.startSelectionBox(e.getX(), e.getY());
+		case COMPARE_BOXES:
+			firstBox = panel.findBox(e.getX(), e.getY());
+			if(firstBox != null)
+			{
+				state = COMPARE_BOXES2;
+				firstBox.setHighlighted(true);
+			}
+			break;
+		case COMPARE_BOXES2:
+			Box secondBox = panel.findBox(e.getX(), e.getY());
+			if(secondBox !=null && !secondBox.equals(firstBox))
+			{
+				firstBox.setHighlighted(false);
+				int redDiff = Math.abs(firstBox.getColor().getRed() - secondBox.getColor().getRed());
+				int greenDiff = Math.abs(firstBox.getColor().getGreen() - secondBox.getColor().getGreen());
+				int blueDiff = Math.abs(firstBox.getColor().getBlue() - secondBox.getColor().getBlue());
+				int avgDiff = (redDiff + greenDiff + blueDiff)/3;
+				
+				JOptionPane.showMessageDialog(frame, "Red difference: " + redDiff+ "\nGreen difference" + greenDiff + "\nBlue difference: " + blueDiff + "\nAverage difference: " + avgDiff);
+				state = COMPARE_BOXES;
+			}
 			break;
 		case BOX_SECOND_CORNER:
 			
 			panel.addBox(boxStartX, boxStartY, e.getX() , e.getY());
 			state = NONE;
 			panel.endSelectionBox();
-			placeBoxB.setBackground(Color.gray);
+			compareBoxesB.setBackground(Color.gray);
+			break;
+		case DELETE_BOX:
+			Box boxToBeDeleted = panel.findBox(e.getX(), e.getY());
+			if(boxToBeDeleted != null)
+			{
+				panel.deleteBox(boxToBeDeleted);
+				state = NONE;
+				deleteBoxesB.setBackground(Color.gray);
+				frame.repaint();
+			}
 			break;
 		case NONE:
 			Box selectedBox = panel.findBox(e.getX(), e.getY());
@@ -128,6 +162,16 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 						"\nBlue: " + boxColor.getBlue() + 
 						"\nSD: " + df.format(selectedBox.getColorSD()));
 			}
+			else
+			{
+
+				panel.endSelectionBox();
+				boxStartX = e.getX();
+				boxStartY = e.getY();
+				state = BOX_SECOND_CORNER;
+				panel.startSelectionBox(e.getX(), e.getY());
+			}
+			break;
 			
 		}
 		frame.repaint();
@@ -147,11 +191,18 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		if(e.getSource().equals(placeBoxB))
+		if(e.getSource().equals(compareBoxesB))
 		{
-			state = BOX_FIRST_CORNER;
-			panel.endSelectionBox();
-			placeBoxB.setBackground(Color.green);
+			if(state == COMPARE_BOXES || state == COMPARE_BOXES2)
+			{
+				state = NONE;
+				compareBoxesB.setBackground(Color.gray);
+			}
+			else
+			{
+				state = COMPARE_BOXES;
+				compareBoxesB.setBackground(Color.green);
+			}
 		}
 		if(e.getSource().equals(fileChooserB))
 		{
@@ -164,6 +215,19 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 			} catch (IOException ee) {
 				ee.printStackTrace();
 				JOptionPane.showMessageDialog(frame, "File \"" + fileChooserField.getText()+ "\" not found");
+			}
+		}
+		if(e.getSource().equals(deleteBoxesB))
+		{
+			if(state == DELETE_BOX)
+			{
+				state = NONE;
+				deleteBoxesB.setBackground(Color.gray);
+			}
+			else
+			{
+				state = DELETE_BOX;
+				deleteBoxesB.setBackground(Color.green);
 			}
 		}
 		

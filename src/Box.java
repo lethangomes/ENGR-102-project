@@ -6,8 +6,8 @@ public class Box {
 	int width;
 	int height;
 	double colorSD;
+	boolean highlighted = false;
 	
-
 	Color color;
 	
 	public Box(int newX, int newY, int newWidth, int newHeight, Color newColor, double newColorSD)
@@ -43,5 +43,13 @@ public class Box {
 	public double getColorSD() {
 		return colorSD;
 	}
+	public boolean isHighlighted() {
+		return highlighted;
+	}
+
+	public void setHighlighted(boolean highlighted) {
+		this.highlighted = highlighted;
+	}
+
 
 }

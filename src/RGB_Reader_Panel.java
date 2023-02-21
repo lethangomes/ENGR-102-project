@@ -36,7 +36,15 @@ public class RGB_Reader_Panel extends JPanel {
 			Color boxColor = currentBox.getColor();
 			g.drawRect(currentBox.getX(), currentBox.getY(), currentBox.getWidth(), currentBox.getHeight());
 			
-			g.setColor(Color.white);
+			if(currentBox.isHighlighted())
+			{
+				g.setColor(Color.green);
+			}
+			else
+			{
+				g.setColor(Color.white);
+			}
+			
 			g.drawRect(currentBox.getX() + 1, currentBox.getY() + 1, currentBox.getWidth() - 2, currentBox.getHeight() - 2);
 			g.fillRect(currentBox.getX(), currentBox.getY() - 20, 120, 20);
 			
@@ -174,6 +182,11 @@ public class RGB_Reader_Panel extends JPanel {
 		}
 		
 		return null;
+	}
+	
+	public void deleteBox(Box boxToDelete)
+	{
+		boxes.remove(boxToDelete);
 	}
 	
 	public void setImage(BufferedImage newImage)
