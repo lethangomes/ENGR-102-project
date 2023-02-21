@@ -10,7 +10,10 @@ import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
 public class RGB_Reader_Panel extends JPanel {
+	
+	//array of all boxes
 	ArrayList<Box> boxes = new ArrayList<Box>();
+	
 	BufferedImage image = null;
 	
 	boolean selectionBoxActive = false;
@@ -27,6 +30,8 @@ public class RGB_Reader_Panel extends JPanel {
 	public void paintComponent(Graphics g)
 	{
 		super.paintComponent(g);
+		
+		///draws image
 		g.drawImage(image, 0, 0, null);
 		
 		//draws boxes
@@ -34,8 +39,11 @@ public class RGB_Reader_Panel extends JPanel {
 		{
 			Box currentBox = boxes.get(i);
 			Color boxColor = currentBox.getColor();
+			
+			//draw box outline
 			g.drawRect(currentBox.getX(), currentBox.getY(), currentBox.getWidth(), currentBox.getHeight());
 			
+			//checks if box should be highlighted
 			if(currentBox.isHighlighted())
 			{
 				g.setColor(Color.green);
@@ -45,16 +53,20 @@ public class RGB_Reader_Panel extends JPanel {
 				g.setColor(Color.white);
 			}
 			
+			//draws inner box outline
 			g.drawRect(currentBox.getX() + 1, currentBox.getY() + 1, currentBox.getWidth() - 2, currentBox.getHeight() - 2);
 			g.fillRect(currentBox.getX(), currentBox.getY() - 20, 120, 20);
 			
+			//draws semi-transparent box inside box outline
 			g.setColor(new Color(boxColor.getRed(), boxColor.getGreen(), boxColor.getBlue(), 100));
 			g.fillRect(currentBox.getX() + 2, currentBox.getY() + 2, currentBox.getWidth() - 4, currentBox.getHeight() - 4);
 			
+			//draws label
 			g.setColor(Color.black);
 			g.drawString("RGB: " + boxColor.getRed() + ", " + boxColor.getGreen() + ", " + boxColor.getBlue(),currentBox.getX() , currentBox.getY() - 5);
 		}
 		
+		//draws selection box
 		if(selectionBoxActive)
 		{
 			int[] selectionBoxParameters = createBoxParameters(selectionBoxX1, selectionBoxY1, selectionBoxX2, selectionBoxY2);
@@ -66,13 +78,17 @@ public class RGB_Reader_Panel extends JPanel {
 		
 	}
 
+	//adds new box
 	public void addBox(int x1, int y1, int x2, int y2) {
+		
+		//creates box parameters based on coordinates
 		int[] boxValues = createBoxParameters(x1, y1, x2, y2);
 		int startX = boxValues[0];
 		int startY = boxValues[1];
 		int boxWidth = boxValues[2];
 		int boxHeight = boxValues[3];
 		
+		//gets all rgb values over an area
 		int[] rgbValues = image.getRGB(startX, startY, boxWidth, boxHeight, null, 0, boxWidth);
 		
 		int red = 0;
@@ -83,6 +99,7 @@ public class RGB_Reader_Panel extends JPanel {
 		int greenSD = 0;
 		int blueSD = 0;
 		
+		//calculates average red, green, and blue values
 		for(int i = 0; i < rgbValues.length; i++)
 		{
 			Color color = new Color(rgbValues[i]);
@@ -94,6 +111,7 @@ public class RGB_Reader_Panel extends JPanel {
 		green /= rgbValues.length;
 		blue /= rgbValues.length;
 		
+		//calculates standard deviation of red, green, and blue values
 		for(int i = 0; i < rgbValues.length; i++)
 		{
 			Color color = new Color(rgbValues[i]);
@@ -101,16 +119,15 @@ public class RGB_Reader_Panel extends JPanel {
 			greenSD += Math.pow(color.getGreen() - green, 2);
 			blueSD += Math.pow(color.getBlue() - blue, 2);
 		}
+		double avgSD = Math.sqrt(((redSD/(rgbValues.length -1)) +  (greenSD/(rgbValues.length -1)) + (blueSD/(rgbValues.length -1)))/3);
 		
-		
-		System.out.println("Red: " + red + ", Green: " +  green + ", Blue: " + blue);
-		
+		//adds new box
 		boxes.add(new Box(startX, 
 				startY, 
 				boxWidth, 
 				boxHeight, 
 				new Color(red, green, blue),
-				Math.sqrt(((redSD/(rgbValues.length -1)) +  (greenSD/(rgbValues.length -1)) + (blueSD/(rgbValues.length -1)))/3)));
+				avgSD));
 	}
 	
 	public void startSelectionBox(int x, int y)
@@ -182,6 +199,14 @@ public class RGB_Reader_Panel extends JPanel {
 		}
 		
 		return null;
+	}
+	
+	public void resetHighlightedBoxes()
+	{
+		for (int i = 0; i < boxes.size(); i++) 
+		{
+			boxes.get(i).setHighlighted(false);
+		}
 	}
 	
 	public void deleteBox(Box boxToDelete)
