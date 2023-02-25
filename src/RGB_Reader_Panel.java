@@ -130,6 +130,7 @@ public class RGB_Reader_Panel extends JPanel {
 				avgSD));
 	}
 	
+	//turns on selection box
 	public void startSelectionBox(int x, int y)
 	{
 		selectionBoxActive = true;
@@ -139,17 +140,20 @@ public class RGB_Reader_Panel extends JPanel {
 		selectionBoxY2 = y;
 	}
 	
+	//updates selection box dimensions
 	public void updateSelectionBox(int x, int y)
 	{
 		selectionBoxX2 = x;
 		selectionBoxY2 = y;
 	}
 	
+	//turns off selection box
 	public void endSelectionBox()
 	{
 		selectionBoxActive = false;
 	}
 	
+	//given 2 sets of coordinates finds upper left corner and the width and height of the box created
 	public int[] createBoxParameters(int x1, int y1, int x2, int y2)
 	{
 		int leftmostX;
@@ -157,6 +161,7 @@ public class RGB_Reader_Panel extends JPanel {
 		int topY;
 		int bottomY;
 		
+		//finds leftmost x
 		if(x1 > x2)
 		{
 			leftmostX = x2;
@@ -168,6 +173,7 @@ public class RGB_Reader_Panel extends JPanel {
 			rightmostX = x2;
 		}
 		
+		//finds highest y coord
 		if(y1 > y2)
 		{
 			topY = y2;
@@ -179,16 +185,19 @@ public class RGB_Reader_Panel extends JPanel {
 			bottomY = y2;
 		}
 		
+		//returns parameters as array
 		int[] parameters = {leftmostX, topY, rightmostX - leftmostX , bottomY - topY};
-		
 		return parameters;
 	}
 	
+	//finds box at given coordinates
 	public Box findBox(int x, int y)
 	{
 		for (int i = 0; i < boxes.size(); i++) 
 		{
 			Box currentBox = boxes.get(i);
+			
+			//checks if coordinates are inside current box
 			if(currentBox.getX() < x &&
 					currentBox.getX() + currentBox.getWidth() > x &&
 					currentBox.getY() < y &&
@@ -198,9 +207,11 @@ public class RGB_Reader_Panel extends JPanel {
 			}
 		}
 		
+		//returns null if no box was found
 		return null;
 	}
 	
+	//unhighlights all boxes
 	public void resetHighlightedBoxes()
 	{
 		for (int i = 0; i < boxes.size(); i++) 
@@ -209,11 +220,19 @@ public class RGB_Reader_Panel extends JPanel {
 		}
 	}
 	
+	//deletes given box
 	public void deleteBox(Box boxToDelete)
 	{
 		boxes.remove(boxToDelete);
 	}
 	
+	//deletes all boxes
+	public void clearBoxes()
+	{
+		boxes = new ArrayList<Box>();
+	}
+	
+	//sets the image being analyzed
 	public void setImage(BufferedImage newImage)
 	{
 		image = newImage;

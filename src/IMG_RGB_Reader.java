@@ -1,12 +1,18 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -22,7 +28,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotionListener {
+public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotionListener, WindowListener {
 
 	RGB_Reader_Panel panel = new RGB_Reader_Panel();
 	JFrame fileChooser = new JFrame("Enter Image File Name");
@@ -32,6 +38,7 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 	JButton fileChooserB = new JButton("Enter");
 	JButton compareBoxesB = new JButton("Compare Boxes");
 	JButton deleteBoxesB = new JButton("Delete Box");
+	JButton changeImageB = new JButton("Change Image");
 	JTextArea boxInfoField =new JTextArea("");
 	JTextArea colorField = new JTextArea();
 	Container east = new Container();
@@ -41,6 +48,7 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 	final int COMPARE_BOXES2 = 2;
 	final int BOX_SECOND_CORNER = 3;
 	final int DELETE_BOX = 4;
+	final int CHANGING_IMAGE = 5;
 	int state = NONE;
 	
 	int boxStartX = 0;
@@ -52,6 +60,14 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 	DecimalFormat df = new DecimalFormat("###.###");
 	
 	Box firstBox = null;
+	
+	
+	Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
+	int screenWidth = (int)size.getWidth();
+	int screenHeight = (int)size.getHeight();
+	
+	int frameWidthOffset = 200;
+	int frameHeightOffset = 100;
 	
 	public static void main(String[] args) 
 	{
@@ -69,13 +85,14 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 		fileChooserB.addActionListener(this);
 		fileChooser.add(fileChooserB, BorderLayout.EAST);
 		fileChooser.setSize(500, 100);
+		fileChooser.addWindowListener(this);
 		fileChooser.setVisible(true);
 	}
 	
 	public void makeFrame()
 	{
 		//creates window for the actual image analysis
-		frame.setSize(image.getWidth() + 100, image.getHeight() + 100);
+		frame.setSize(image.getWidth() + frameWidthOffset, image.getHeight() + frameHeightOffset);
 		frame.setLayout(new BorderLayout());
 		frame.add(panel, BorderLayout.CENTER);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -89,9 +106,12 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 		compareBoxesB.setBackground(Color.gray);
 		deleteBoxesB.addActionListener(this);
 		deleteBoxesB.setBackground(Color.gray);
+		changeImageB.addActionListener(this);
+		changeImageB.setBackground(Color.gray);
 		boxInfoField.setEditable(false);
 		east.add(compareBoxesB);
 		east.add(deleteBoxesB);
+		east.add(changeImageB);
 		east.add(colorField);
 		east.add(boxInfoField);
 		frame.add(east, BorderLayout.EAST);
@@ -131,19 +151,22 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 				int avgDiff = (redDiff + greenDiff + blueDiff)/3;
 				
 				//creates pop-up window displaying results
-				JOptionPane.showMessageDialog(frame, "Red difference: " + redDiff+ "\nGreen difference" + greenDiff + "\nBlue difference: " + blueDiff + "\nAverage difference: " + avgDiff);
+				JOptionPane.showMessageDialog(frame, "Red difference: " + redDiff+ "\nGreen difference: " + greenDiff + "\nBlue difference: " + blueDiff + "\n\nAverage difference: " + avgDiff);
 				state = COMPARE_BOXES;
 			}
 			break;
 		case BOX_SECOND_CORNER:
-			
-			//creates a new box using mouse coordinates
-			panel.addBox(boxStartX, boxStartY, e.getX() , e.getY());
-			
-			//resets state and turns off selection box
-			state = NONE;
-			panel.endSelectionBox();
-			compareBoxesB.setBackground(Color.gray);
+			//makes sure user actually clicked image
+			if(e.getX() <= image.getWidth() && e.getY() <= image.getHeight())
+			{
+				//creates a new box using mouse coordinates
+				panel.addBox(boxStartX, boxStartY, e.getX() , e.getY());
+				
+				//resets state and turns off selection box
+				state = NONE;
+				panel.endSelectionBox();
+				compareBoxesB.setBackground(Color.gray);
+			}
 			break;
 		case DELETE_BOX:
 			
@@ -183,10 +206,16 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 				//if a box was not clicked, sets initial points for new box
 				boxStartX = e.getX();
 				boxStartY = e.getY();
-				state = BOX_SECOND_CORNER;
 				
-				//starts selection box
-				panel.startSelectionBox(e.getX(), e.getY());
+				//checks if user actually clicked image
+				if(boxStartX <= image.getWidth() && boxStartY <= image.getHeight())
+				{
+					state = BOX_SECOND_CORNER;
+					
+					//starts selection box
+					panel.startSelectionBox(e.getX(), e.getY());
+				}
+				
 			}
 			break;
 			
@@ -226,9 +255,35 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 			try {
 				//sets image to the file specified by user, then creates window to display image
 				 image = ImageIO.read(file);
+				 double aspectRatio = (double)image.getWidth()/image.getHeight();
+				 
+				 //adjusts image if it's too wide
+				 if(image.getWidth() + frameWidthOffset > screenWidth)
+				 {
+					 image = resize(image, screenWidth - frameWidthOffset, (int)((screenWidth - frameWidthOffset) * (1/aspectRatio)));
+				 }
+				 
+				 //adjusts image if it's too tall
+				 if(image.getHeight() + frameHeightOffset > screenHeight)
+				 {
+					 image = resize(image, (int)((screenHeight - frameHeightOffset) * aspectRatio), screenHeight - frameHeightOffset);
+				 }
+				 
 				 panel.setImage(image);
 				 fileChooser.setVisible(false);
-				 makeFrame();
+				 if(state == NONE)
+				 {
+					 //creates frame if the frame hasn't been made yet
+					 makeFrame();
+					 fileChooser.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+				 }
+				 else if(state == CHANGING_IMAGE)
+				 {
+					 //updates frame size to match new image and clears all boxes
+					 panel.clearBoxes();
+					 frame.setSize(image.getWidth() + frameWidthOffset, image.getHeight() + frameHeightOffset);
+					 state = NONE;
+				 }
 			} catch (IOException ee) {
 				//if the file was not found, or is not readable notifies user.
 				ee.printStackTrace();
@@ -251,8 +306,20 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 				compareBoxesB.setBackground(Color.gray);
 			}
 		}
+		if(e.getSource().equals(changeImageB)) //change image button pressed
+		{
+			//makes file chooser window visible
+			fileChooser.setVisible(true);
+			state = CHANGING_IMAGE;
+		}
+		else if(!e.getSource().equals(fileChooserB)) //anything other than the change image button or the file chooser button pressed
+		{
+			//makes file choose window invisible
+			fileChooser.setVisible(false);
+		}
 		
 	}
+
 
 
 	@Override
@@ -291,5 +358,59 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 		
 	}
 
+	//Method to resize BufferedImages. Source: https://stackoverflow.com/questions/9417356/bufferedimage-resize
+	public static BufferedImage resize(BufferedImage img, int newW, int newH) { 
+	    Image tmp = img.getScaledInstance(newW, newH, Image.SCALE_SMOOTH);
+	    BufferedImage dimg = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_ARGB);
 
+	    Graphics2D g2d = dimg.createGraphics();
+	    g2d.drawImage(tmp, 0, 0, null);
+	    g2d.dispose();
+
+	    return dimg;
+	}
+
+	@Override
+	public void windowOpened(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowClosing(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowClosed(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowIconified(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowDeiconified(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowActivated(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	//makes sure state is NONE when filechooser window is closed
+	@Override
+	public void windowDeactivated(WindowEvent e) {
+		state = NONE;
+		
+	}  
+	
 }
