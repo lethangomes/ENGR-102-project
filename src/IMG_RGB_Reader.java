@@ -17,17 +17,13 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.util.Scanner;
 
 import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 
 public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotionListener, WindowListener {
 
@@ -35,7 +31,6 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 	JFrame fileChooser = new JFrame("Enter Image File Name");
 	JFrame frame = new JFrame();
 	
-	JTextField fileChooserField = new JTextField();
 	JButton compareBoxesB = new JButton("Compare Boxes");
 	JButton deleteBoxesB = new JButton("Delete Box");
 	JButton changeImageB = new JButton("Change Image");
@@ -79,18 +74,7 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 	
 	public IMG_RGB_Reader()
 	{
-		//opens file chooser to get image
-		int fileNum = fc.showOpenDialog(fileChooser);
-		if(fileNum == JFileChooser.APPROVE_OPTION)
-		{
-			File file = fc.getSelectedFile();
-			readFile(file);
-		}
-		else
-		{
-			frame.dispose();
-			System.exit(0);
-		}
+		getFile();
 	}
 	
 	public void makeFrame()
@@ -272,17 +256,7 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 			
 			state = CHANGING_IMAGE;
 			
-			//opens file chooser
-			int fileNum = fc.showOpenDialog(fileChooser);
-			if(fileNum == JFileChooser.APPROVE_OPTION)
-			{
-				File file = fc.getSelectedFile();
-				readFile(file);
-			}
-			else
-			{
-				state = NONE;
-			}
+			getFile();
 		}
 		
 	}
@@ -386,39 +360,67 @@ public class IMG_RGB_Reader implements ActionListener, MouseListener, MouseMotio
 		try {
 			//sets image to the file specified by user, then creates window to display image
 			 image = ImageIO.read(file);
-			 double aspectRatio = (double)image.getWidth()/image.getHeight();
-			 
-			 //adjusts image if it's too wide
-			 if(image.getWidth() + frameWidthOffset > screenWidth)
+			 if(image != null)
 			 {
-				 image = resize(image, screenWidth - frameWidthOffset, (int)((screenWidth - frameWidthOffset) * (1/aspectRatio)));
+				 double aspectRatio = (double)image.getWidth()/image.getHeight();
+				 
+				 //adjusts image if it's too wide
+				 if(image.getWidth() + frameWidthOffset > screenWidth)
+				 {
+					 image = resize(image, screenWidth - frameWidthOffset, (int)((screenWidth - frameWidthOffset) * (1/aspectRatio)));
+				 }
+				 
+				 //adjusts image if it's too tall
+				 if(image.getHeight() + frameHeightOffset > screenHeight)
+				 {
+					 image = resize(image, (int)((screenHeight - frameHeightOffset) * aspectRatio), screenHeight - frameHeightOffset);
+				 }
+				 
+				 panel.setImage(image);
+				 fileChooser.setVisible(false);
+				 if(state == NONE)
+				 {
+					 //creates frame if the frame hasn't been made yet
+					 makeFrame();
+					 fileChooser.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+				 }
+				 else if(state == CHANGING_IMAGE)
+				 {
+					 //updates frame size to match new image and clears all boxes
+					 panel.clearBoxes();
+					 frame.setSize(image.getWidth() + frameWidthOffset, image.getHeight() + frameHeightOffset);
+					 state = NONE;
+				 }
 			 }
-			 
-			 //adjusts image if it's too tall
-			 if(image.getHeight() + frameHeightOffset > screenHeight)
+			 else
 			 {
-				 image = resize(image, (int)((screenHeight - frameHeightOffset) * aspectRatio), screenHeight - frameHeightOffset);
-			 }
-			 
-			 panel.setImage(image);
-			 fileChooser.setVisible(false);
-			 if(state == NONE)
-			 {
-				 //creates frame if the frame hasn't been made yet
-				 makeFrame();
-				 fileChooser.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-			 }
-			 else if(state == CHANGING_IMAGE)
-			 {
-				 //updates frame size to match new image and clears all boxes
-				 panel.clearBoxes();
-				 frame.setSize(image.getWidth() + frameWidthOffset, image.getHeight() + frameHeightOffset);
-				 state = NONE;
+				 JOptionPane.showMessageDialog(frame, "Invalid file");
+				 getFile();
 			 }
 		} catch (IOException ee) {
 			//if the file was not found, or is not readable notifies user.
 			ee.printStackTrace();
-			JOptionPane.showMessageDialog(frame, "File \"" + fileChooserField.getText()+ "\" not found");
+			
+		}
+	}
+	
+	public void getFile()
+	{
+		//opens file chooser to get image
+		int fileNum = fc.showOpenDialog(fileChooser);
+		if(fileNum == JFileChooser.APPROVE_OPTION)
+		{
+			File file = fc.getSelectedFile();
+			readFile(file);
+		}
+		else if(state == NONE)
+		{
+			frame.dispose();
+			System.exit(0);
+		}
+		else
+		{
+			state = NONE;
 		}
 	}
 }
